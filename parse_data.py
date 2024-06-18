@@ -1,28 +1,45 @@
 import textract
+import subprocess
+import os
+
+START_YEAR = 2013
+END_YEAR = 2023
 
 # load document
-file_path = '/Volumes/USB2/cba-polrep-anal/data/2013-2017/2013/Program Q2, 2013 Eng.doc'
-
-def parse_doc(fname):
+def parse_doc(fname, quarter, year):
     # parse doc into text
-    text_bytes = textract.process(file_path)
-    text = text_bytes.decode('utf-8')
+    if '.docx' in fname:
+      try:
+        text_bytes = textract.process(fname)
+        text = text_bytes.decode('utf-8')
+      except Exception as e:
+        print(f"Error {e} occurred while trying to load file")
 
-    # find quarter and year
-    idx = text.index("Monetary Policy Program,")
-    quart_year = text[idx + len("Monetary Policy Program, "):idx + len("Monetary Policy Program, Q#, 20##")]
-    quarter = quart_year[1:2]
-    year = quart_year[4:8]
-    print(f'quarter {quarter}, year {year}')
+    elif '.doc' in fname:
+      try:
+        result = subprocess.run(['antiword', fname], stdout=subprocess.PIPE)
+        text = result.stdout.decode('utf-8')
+      except Exception as e:
+          print(f"Error {e} occurred while trying to load file")
 
+    print(f"Text loaded for Q{quarter}, {year}.")
 
-parse_doc(file_path)
-# # Extract text from the document
-# full_text = []
-# for para in document.paragraphs:
-#     full_text.append(para.text)
+path = '/Volumes/USB2/cba-polrep-anal/data'
+def parse_docs():
+    for year in range(START_YEAR, END_YEAR + 1):
+        for quarter in range(1, 5):
+            paths = [path + f'/{year}/Program Q{quarter}, {year} eng.doc',
+                     path + f'/{year}/Program Q{quarter}, {year} Eng.doc',
+                     path + f'/{year}/Program Q{quarter}, {year} eng.docx',
+                     path + f'/{year}/Program Q{quarter}, {year} Eng.docx']
+            # obtain file path
+            file_path = ''
+            for p in paths:
+              if os.path.exists(p):
+                file_path = p
+                break
+            if file_path == '':
+              raise FileNotFoundError(f"Q{quarter}, {year} file does not exist")
+            parse_doc(file_path, quarter, year)
 
-# # Combine the text from all paragraphs
-# document_text = '\n'.join(full_text)
-
-# print(document_text)
+parse_docs()
